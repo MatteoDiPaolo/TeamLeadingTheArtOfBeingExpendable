@@ -1,8 +1,8 @@
 # Description
 
-Talk about [Systemic](https://www.npmjs.com/package/systemic) a minimal dependency injection library for node.js.
+Talk about Team Leading.
 
-You can access the presentation __[here](https://matteodipaolo.github.io/Reaching88MphWithSystemic/#/)__
+You can access the presentation __[here](https://matteodipaolo.github.io/TeamLeadingTheArtOfBeingExpendable/#/)__
 
 # Notes
 
