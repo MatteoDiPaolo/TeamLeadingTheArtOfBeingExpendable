@@ -696,6 +696,496 @@
 			<section>
 				<section>
 					<h2>THE PROJECT</h2>
+					<div class="row">
+						<div class="column">
+							<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+								height="300" data-src="./images/22.jpeg" alt="...">
+						</div>
+						<div class="column" style="margin: 0 0 0 0 !important; text-align: left;">
+							<ul style="font-size: 30px;">
+								<li><span>Running smoothly</span></li>
+								<li><span>Being delivered on time</span></li>
+								<li><span>Flying a plane</span></li>
+								<li><span>Security nets and parachutes</span></li>
+							</ul>
+						</div>
+					</div>
+					
+					<aside class="notes">
+						<ul>
+							<li>point A to point B</li>
+							<li>the higher is the level of control the crew has, the more likely is to have a safe trip</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Platform</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/23.png" alt="...">
+					
+					<aside class="notes">
+						<ul>
+							<li>services input / output</li>
+							<li>services sync / async interfaces</li>
+							<li>services workflows (2 or more)</li>
+							<li>services monitoring</li>
+							<li>infra pieces monitoring</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>CI/CD</h2>
+					<div class="row">
+						<div class="column">
+							<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+								height="450" data-src="./images/24.png" alt="...">
+						</div>
+						<div class="column">
+							<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+								height="150" data-src="./images/25.png" alt="...">
+						</div>
+					</div>
+					
+					<aside class="notes">
+						<ul>
+							<li>build (licence checker, tests run, sonar, etc.)</li>
+							<li>deploy</li>
+							<li>3 envs</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>infrastructure</h2>
+					<div class="row">
+						<div class="column">
+							<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+resource "azurerm_mssql_server" "mssql_server" {
+	name                         = "waterline-mssql-server-${var.environment}"
+	location                     = var.resource_group_location
+	resource_group_name          = var.resource_group_name
+	version                      = "12.0"
+	administrator_login          = var.mssql_server_admin_user
+	administrator_login_password = random_password.mssql_password.result
+
+	tags = {
+		source      = "terraform"
+		environment = var.environment,
+	}
+}
+
+module "mssql_databases" {
+	source          = "./mssql_databases"
+	environment     = var.environment
+	mssql_server_id = azurerm_mssql_server.mssql_server.id
+}								  
+							</code></pre>
+						</div>
+						<div class="column">
+							<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+								height="200" data-src="./images/26.png" alt="...">
+						</div>
+					</div>
+					
+					<aside class="notes">
+						<ul>
+							<li>terraform, infra as a code, plan and apply</li>
+							<li>naming convention</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Docs and Validation</h2>
+					<small>Security Net and a Common Language</small>
+					<br>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/27.gif" alt="...">
+				</section>
+
+				<section>
+					<h2>Sync interfaces docs</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/28.png" alt="...">
+					
+					<aside class="notes">
+						<ul>
+							<li>forced to think a lot about the correct behaviour of the interface</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Sync interfaces docs</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/29.png" alt="...">
+				</section>
+
+				<section>
+					<h2>Sync interfaces validation</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+/**
+* GET /v2/packages/{packageId}/translationsHistory
+* @summary This endpoint returns the package's translation history
+* @tags Nike data processing v2
+* @param {string} packageId.path.required Package ID
+* @param {number} offset.query Offset (default: 0)
+* @param {number} limit.query Limit (default: 50)
+* @return {TranslationsHistoryResponse} 200 - Successful response
+* @return {ErrorServerResponse} 500 - Server error
+* @return {NotFoundResponse} 404 - Not found
+* @return {BadRequestResponse} 400 - Bad request
+*/
+app.get('/v2/packages/:packageId/translationsHistory', ExpressJoi({
+	params: {
+		packageId: Joi.string().regex(/^[a-zA-Z0-9-_.]+$/).required(),
+	},
+	query: {
+		offset: Joi.number().min(0).optional(),
+		limit: Joi.number().min(1).optional(),
+	},
+}), async (req, res, next) => {
+	const { packageId } = req.params;
+	const { offset, limit } = req.query;
+
+	try {
+		const translationsHistory = await controller.v2.api.getTranslationsHistory(packageId, offset, limit);
+		return res.json(translationsHistory);
+	} catch (err) {
+		if (err.message === 'content_not_found') return next(tagError({ type: 'not_found', message: `Translation history for package ${packageId} was not found` }));
+		return next(tagError(err));
+	}
+});
+					</code></pre>
+
+					<aside class="notes">
+						<ul>
+							<li>forced to think a lot about the correct behaviour of the interface</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Async interfaces docs</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/30.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>forced to think a lot about the correct behaviour of the interface</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Async interfaces validation</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="language-yaml" style="word-wrap: break-word;">
+channels:
+  ecommerce-proxy.v1.shippingcost.updated:
+    subscribe:
+      summary: Subscribe to information about a shippingcost updated v1
+      operationId: integrationsShippingcostUpdated
+      message:
+      $ref: "#/components/messages/ecommerce-proxy-v1-shippingcost-updated"
+components:
+  messages:
+    integrations-adapter-v2-shippingcost-updated:
+      contentType: application/json
+      payload:
+      $ref: "#/components/schemas/integrations-adapter-v2-shippingcost-updated-message-schema"
+  schemas:
+    integrations-adapter-v2-shippingcost-updated-message-schema:
+      type: object
+      required:
+      - lastUpdatedTimestamp
+      - type
+      - isInactive
+      - shippingTable
+      properties:
+        lastUpdatedTimestamp:
+          type: string
+          description: timestamp of the last update operation over the shippingcost made in integrations
+        type:
+          type: string
+          description: shippingcost id
+        isInactive:
+          type: boolean
+          description: shippingcost active flag
+        shippingTable:
+          type: array
+          description: shipping table with ranges and charges
+          items:
+            type: object
+            required:
+              - range
+              - charge
+            properties:
+              range:
+                type: string
+                description: range minimum order cost
+              charge:
+                type: number
+                description: charge to apply to the minimum order cost
+					</code></pre>
+
+					<aside class="notes">
+						<ul>
+							<li>forced to think a lot about the correct behaviour of the interface</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Async interfaces validation</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+const updateShippingCost = subscription => async ({ body: integrationsShippingCost }) => {
+	const shippingCostType = integrationsShippingCost.shippingTableChargeBy
+
+	try {
+		validator.validateSubscribePayload(subscription, integrationsShippingCost)
+		logger.info(`Subscription: ${subscription} message processing started for shippingCost: ${shippingCostType}`)
+
+		const storedShippingCost = await mongodb.v2.shippingcosts.getShippingCostByType(shippingCostType)
+		const shouldNotUpsert = storedShippingCost ? storedShippingCost.lastUpdateTimestamp >= integrationsShippingCost.lastUpdated : false
+
+		if (shouldNotUpsert) {
+		logger.info(`Subscription: ${subscription} message processing skipped for shippingCost: ${shippingCostType}`)
+		return
+		}
+
+		const shippingCost = parser(integrationsShippingCost)
+		await mongodb.v2.shippingcosts.upsertShippingCost(shippingCost)
+		await bus.v2.ecommerce.publish('shippingCostUpdated')(shippingCost)
+		monitor.trackShippingCostUpdatedSuccess()
+		logger.info(`Subscription: ${subscription} message processing succeed for shippingCost: ${shippingCostType}`)
+	} catch (err) {
+		monitor.trackShippingCostUpdatedFail()
+		logger.error(`Subscription: ${subscription} message processing failed for shippingCost: ${shippingCostType}. Error: ${err.message}`)
+		throw err
+	}
+}
+					</code></pre>
+
+					<aside class="notes">
+						<ul>
+							<li>forced to think a lot about the correct behaviour of the interface</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Backoffice sync interfaces</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/31.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>useful for other stakeholders with less coding skills / access rights</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Ad hoc docs</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/32.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>useful for other stakeholders with less coding skills / access rights</li>
+							<li>created from unit tests fixtures</li>
+							<li>updated on each build and served as a static page</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Monitoring and Alerting</h2>
+					<small>Security Net and a Common Language</small>
+					<br>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/33.gif" alt="...">
+				</section>
+
+				<section>
+					<h2>Events</h2>
+					<div>
+						<ul>
+							<li>
+								<span class="gs-text">PERFORMACE</span>
+								<ul>
+									<li><span>cpu / memory consumption</span></li>
+									<li><span>restarts</span></li>
+								</ul>
+							</li>
+							<li>
+								<span class="gs-text">INFRASTRUCTURE</span>
+								<ul>
+									<li><span>DBs / Storages / Buckets usage</span></li>
+									<li><span>Message Broker status</span></li>
+								</ul>
+							</li>
+							<li>
+								<span class="gs-text">INGESTION</span>
+								<ul>
+									<li><span>content deltas / processed / indexed</span></li>
+								</ul>
+							</li>
+							<li>
+								<span class="gs-text">RETRIEVAL</span>
+								<ul>
+									<li><span>content retrieved / requested / published</span></li>
+								</ul>
+							</li>
+						</ul>
+					</div>
+
+					<aside class="notes">
+						<ul>
+							<li>weekly fighter task to review it</li>
+							<li>mixing all the info in them we can identify issues</li>
+							<li>mission control panel (flying a plane)</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Azure setup</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/34.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>just an example</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>PERFORMACE</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/35.png" alt="...">
+				</section>
+
+				<section>
+					<h2>INFRASTRUCTURE</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/36.png" alt="...">
+				</section>
+
+				<section>
+					<h2>INGESTION</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/37.png" alt="...">
+				</section>
+
+				<section>
+					<h2>RETRIEVAL</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/38.png" alt="...">
+				</section>
+
+				<section>
+					<h2>RETRIEVAL</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/39.png" alt="...">
+				</section>
+
+				<section>
+					<h2>Alerts</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/40.png" alt="...">
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/41.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>here we use logic apps, you can use what you want</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Testing</h2>
+					<small>Security Net and a Common Language</small>
+					<br>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						height="400" data-src="./images/42.gif" alt="...">
+				</section>
+
+				<section>
+					<h2>Business logic flows</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/43.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>Input / output</li>
+							<li>Data parsing and transformation</li>
+						</ul>
+					</aside>
+				</section>
+
+				<section>
+					<h2>Integration Async</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+describe('[Integration-Tests] - V2 BUS - Shipping cost', async () => {
+	it('Should process integrations shipping cost', async () => {
+		const shippingCostType = integrationsShippingCost.shippingTableChargeBy
+		await busComponent.v2.integrations.publish('shippingCostUpdated')(integrationsShippingCost)
+		await sleep(500)
+
+		const storedShippingCost = await storeComponent.v2.shippingcosts.getShippingCostByType(shippingCostType)
+		expect(storedShippingCost).toEqual(ecommerceShippingCost)
+	})
+})
+					</code></pre>
+				</section>
+
+				<section>
+					<h2>Integration Sync</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+describe('[Integration-Tests] - V2 API - Endpoint: /v2/packages/{id}/translationsHistory', async () => {
+	it('Should retrieve translation history for requested package', async () => {
+		const response = await request.get(`/v2/packages/${translationData[0].id}/translationsHistory`);
+		expect(response.status).to.deep.equal(200);
+		expect(response.body).to.deep.equal(translationHistoryResponse);
+	});
+
+	it('Should return 404 if history for requested package does not exists', async () => {
+		const response = await request.get('/v2/packages/123/translationsHistory');
+		expect(response.status).to.deep.equal(404);
+		expect(response.body.message).to.deep.equal('Translation history for package 123 was not found');
+	});
+});
+					</code></pre>
+				</section>
+
+				<section>
+					<h2>Unit</h2>
+					<pre style="font-size: 12px; margin-top: 0;"><code class="hljs js" style="word-wrap: break-word;">
+describe('[Unit-Tests] - V2 - shipping costs parser', () => {
+	it('Should parse an integrations shipping cost', () => {
+		const result = parser(integrationsShippingCost)
+		expect(result).toEqual(ecommerceShippingCost)
+	})
+})
+					</code></pre>
+				</section>
+
+				<section>
+					<h2>Folders structure</h2>
+					<img style="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/44.png" alt="...">
+					<img  tyle="margin: 0px !important; opacity: 1; background-color: transparent; box-shadow: none;"
+						data-src="./images/45.png" alt="...">
+
+					<aside class="notes">
+						<ul>
+							<li>Input / output</li>
+							<li>No problems in huge refactoring of spaghetti code</li>
+						</ul>
+					</aside>
 				</section>
 			</section>
 
